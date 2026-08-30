@@ -1,0 +1,3 @@
+idp:
+  client_id: "![ADD_CONNECTED_APP_CLIENT_ID]"
+  client_secret: "![ADD_CONNECTED_APP_CLIENT_SECRET]"

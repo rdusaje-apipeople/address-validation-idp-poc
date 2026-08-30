@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:idp-extract-us-dl-document-action-100="http://www.mulesoft.org/schema/mule/idp-extract-us-dl-document-action-100"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/idp-extract-us-dl-document-action-100 http://www.mulesoft.org/schema/mule/idp-extract-us-dl-document-action-100/current/mule-idp-extract-us-dl-document-action-100.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd">
+	<flow name="address-validation-poc" doc:id="c050dbbc-9fcf-4a27-9ad7-67ea37eb0405" >
+		<http:listener doc:name="Listener" doc:id="5690b145-113a-4e62-8054-616801e220ce" config-ref="HTTP_Listener_config" path="/extract-address-us-dl" >
+			<http:error-response statusCode='#[vars.httpStatus default "500"]' >
+				<http:body ><![CDATA[#[output text/plain --- payload.error default error.description]]]></http:body>
+			</http:error-response>
+		</http:listener>
+		<logger level="INFO" doc:name="LOG START" doc:id="59b45aa0-5be0-45bd-9330-91752a3b7e9f" message='#["Start of process  "]' />
+		<ee:transform doc:name="Set Parameters" doc:id="3db51033-d6e2-4418-a235-46068fd46e52" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+    fileName: attributes.headers.'FileName' default "driving_license.jpg",
+    fileContentType: attributes.headers.'content-type' default "application/octet-stream",
+    fileContent: payload
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="process" ><![CDATA[%dw 2.0
+output application/java
+---
+attributes.queryParams."DocumentType"]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<ee:transform doc:name="Extract Process Data" doc:id="dfbc1c09-161e-48f2-bf04-65af8a04ad0a" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output multipart/form-data
+---
+{
+    parts: {
+        file: {
+            headers: {
+                "Content-Disposition": {
+                    "name": "file",
+                    "filename": payload.fileName,
+                    "subtype": "form-data"
+                },
+                "Content-Type": payload.fileContentType
+            },
+            content: payload.fileContent
+        }
+    }
+}
+]]></ee:set-payload>
+			</ee:message>
+			<ee:variables />
+		</ee:transform>
+		<idp-extract-us-dl-document-action-100:postdocumentactionexecution doc:id="4624fe5b-b141-44ef-9e58-34453b71a034" config-ref="IDP___extract_us_dl_document_action___1_0_0_Config" target="USA_DL_IDP" doc:name="postDocumentActionExecution" />
+		<scripting:execute engine="Groovy" doc:id="f43a0ab9-ee57-4418-a62b-22a7f8dc01cc" doc:name="10s Delay" >
+			<scripting:code ><![CDATA[Thread.sleep(10000);]]></scripting:code>
+		</scripting:execute>
+		<idp-extract-us-dl-document-action-100:getdocumentactionexecution doc:id="4fda347e-e2bc-4c6d-9700-35858c0148ca" config-ref="IDP___extract_us_dl_document_action___1_0_0_Config" execution-id="#[vars.USA_DL_IDP.id]" doc:name="getDocumentActionExecution" />
+		<ee:transform doc:name="Extract Details" doc:id="175ba7e3-bb09-4f92-8a91-842863125c11" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.fields mapObject ((value, key, index) -> (key):(value.value))]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="Final Output" doc:id="46d66619-dbd7-447d-a5d4-f21d78cd29b3" >
+			<ee:message />
+			<ee:variables >
+				<ee:set-variable variableName="postToSmartContract" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "data": payload 
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="LOG END" doc:id="21c85ec0-60b4-434d-ae91-dce1836af6f8" message='#[%dw 2.0&#10;output application/json&#10;---&#10;"End of process  " ++ write(payload, "application/java")]' category="splunkLogCategory" />
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="29bd0687-62da-450b-9a9d-cd66125cc586" type="ANY" >
+				<logger level="INFO" doc:name="LOG ERROR" doc:id="088025a9-8d69-4e28-8f8e-a71fa8c5c8d2" message='#[%dw 2.0&#10;output application/java&#10;---&#10;"An Error Occured ---  " ++ write(error.description, "application/json")]' category="splunkLogCategory" />
+				<set-variable value="" doc:name="httpStatus" doc:id="733f4ecb-0981-4353-a5aa-ea40a0c68f23" variableName="500" />
+				<set-payload value="#[output application/json&#10;---&#10;{&#10;	error: error.detailedDescription&#10;}]" doc:name="Set Error" doc:id="0c785200-b447-495f-951b-90665bbe6253" />
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+</mule>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties" xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
+	xmlns:idp-extract-us-dl-document-action-100="http://www.mulesoft.org/schema/mule/idp-extract-us-dl-document-action-100"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/idp-extract-us-dl-document-action-100 http://www.mulesoft.org/schema/mule/idp-extract-us-dl-document-action-100/current/mule-idp-extract-us-dl-document-action-100.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="ba6434e1-73e0-45ba-b3c3-2d06e2d3d82e" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<idp-extract-us-dl-document-action-100:config name="IDP___extract_us_dl_document_action___1_0_0_Config" doc:name="IDP - extract-us-dl-document-action - 1.0.0 Config" doc:id="63cd600a-5824-4277-b585-efa276c9d062" property_host="idp-rt.us-east-1.anypoint.mulesoft.com" property_port="443" property_protocol="HTTPS" property_responseTimeout="30000" property_client-id="#[p('secure::idp.client_id')]" property_client-secret="${secure::idp.client_secret}"/>
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="8d472da3-4519-4a1b-93bb-e02b721d501a" file="config.yaml" key="${key}" >
+		<secure-properties:encrypt algorithm="Blowfish" />
+	</secure-properties:config>
+	<global-property doc:name="Global Property" doc:id="17410a11-d846-4d3d-9a11-393fb1571645" name="key" value="ADD_ENCRYPTION_KEY" />
+</mule>
